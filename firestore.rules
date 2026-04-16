@@ -1,0 +1,228 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - role: string (required, 'parent' or 'child')
+    //   - displayName: string (optional)
+    //   - parentId: string (optional, UID of parent if role is 'child')
+    //
+    // Collection: devices
+    // Document ID: {deviceId}
+    // Fields:
+    //   - deviceId: string (required)
+    //   - childId: string (required)
+    //   - model: string (optional)
+    //   - osVersion: string (optional)
+    //   - lastSeen: timestamp (optional)
+    //   - batteryLevel: number (optional)
+    //   - isOnline: bool (optional)
+    //
+    // Collection: messages
+    // Document ID: {messageId}
+    // Fields:
+    //   - childId: string (required)
+    //   - platform: string (required, 'SMS', 'WhatsApp', etc.)
+    //   - sender: string (required)
+    //   - content: string (required)
+    //   - timestamp: timestamp (required)
+    //   - type: string (required, 'incoming' or 'outgoing')
+    //
+    // Collection: locations
+    // Document ID: {locationId}
+    // Fields:
+    //   - childId: string (required)
+    //   - latitude: number (required)
+    //   - longitude: number (required)
+    //   - timestamp: timestamp (required)
+    //   - accuracy: number (optional)
+    //
+    // Collection: app_usage
+    // Document ID: {usageId}
+    // Fields:
+    //   - childId: string (required)
+    //   - packageName: string (required)
+    //   - appName: string (required)
+    //   - totalTimeVisible: number (optional)
+    //   - lastUsed: timestamp (optional)
+    //
+    // Collection: blocked_apps
+    // Document ID: {blockId}
+    // Fields:
+    //   - childId: string (required)
+    //   - packageName: string (required)
+    //   - blockedAt: timestamp (required)
+    //
+    // Collection: geofences
+    // Document ID: {geofenceId}
+    // Fields:
+    //   - parentId: string (required)
+    //   - childId: string (required)
+    //   - name: string (required)
+    //   - latitude: number (required)
+    //   - longitude: number (required)
+    //   - radius: number (required)
+    //
+    // Collection: keystrokes
+    // Document ID: {keystrokeId}
+    // Fields:
+    //   - childId: string (required)
+    //   - appName: string (optional)
+    //   - text: string (required)
+    //   - timestamp: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == 'admin') ||
+          (request.auth.token.email == "mdrajuahmed65436@gmail.com" && request.auth.token.email_verified == true)
+        );
+    }
+
+    function isParentOf(childId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(childId)) &&
+             getUserData(childId).parentId == request.auth.uid;
+    }
+
+    function isChild() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData(request.auth.uid).role == 'child';
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() > 0 &&
+             (!('email' in data) || (data.email is string && isValidEmail(data.email))) &&
+             data.role in ['parent', 'child', 'admin'] &&
+             (!('parentId' in data) || data.parentId is string) &&
+             (!('displayName' in data) || data.displayName is string) &&
+             (!('pairingCode' in data) || (data.pairingCode is string && data.pairingCode.size() == 6));
+    }
+
+    function isValidDevice(data) {
+      return data.deviceId is string && data.deviceId.size() > 0 &&
+             data.childId is string && data.childId.size() > 0 &&
+             (!('batteryLevel' in data) || (data.batteryLevel is number && data.batteryLevel >= 0 && data.batteryLevel <= 100)) &&
+             (!('networkType' in data) || data.networkType in ['WiFi', 'Mobile Data', 'None']) &&
+             (!('wifiName' in data) || data.wifiName is string);
+    }
+
+    function isValidMessage(data) {
+      return data.childId is string && data.childId.size() > 0 &&
+             data.platform is string && data.platform.size() > 0 &&
+             data.sender is string && data.sender.size() > 0 &&
+             data.content is string && data.content.size() < 5000 &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidLocation(data) {
+      return data.childId is string && data.childId.size() > 0 &&
+             data.latitude is number && data.latitude >= -90 && data.latitude <= 90 &&
+             data.longitude is number && data.longitude >= -180 && data.longitude <= 180 &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.childId is string && data.childId.size() > 0 &&
+             data.appName is string && data.appName.size() > 0 &&
+             data.content is string && data.content.size() < 5000 &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated() && (isAdmin() || request.query.limit <= 100);
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(uid) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(uid) || isAdmin());
+    }
+
+    match /devices/{deviceId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidDevice(request.resource.data);
+
+    }
+
+    match /messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMessage(request.resource.data);
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
+    }
+
+    match /locations/{locationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidLocation(request.resource.data);
+    }
+
+    match /app_usage/{usageId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+    }
+
+    match /blocked_apps/{blockId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
+    }
+
+    match /geofences/{geofenceId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
+    }
+
+    match /keystrokes/{keystrokeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

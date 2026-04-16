@@ -1,0 +1,10 @@
+{
+  "name": "GuardianSync: Parental Control & Safety",
+  "description": "A comprehensive parental monitoring solution with real-time GPS tracking, message monitoring, and app management.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}

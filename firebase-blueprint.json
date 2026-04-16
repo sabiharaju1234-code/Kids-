@@ -1,0 +1,162 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for parents and children",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["parent", "child"] },
+        "displayName": { "type": "string" },
+        "parentId": { "type": "string", "description": "UID of the parent if this is a child account" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Device": {
+      "title": "Device",
+      "description": "Information about the monitored device",
+      "type": "object",
+      "properties": {
+        "deviceId": { "type": "string" },
+        "childId": { "type": "string" },
+        "model": { "type": "string" },
+        "osVersion": { "type": "string" },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "batteryLevel": { "type": "number" },
+        "isOnline": { "type": "boolean" },
+        "networkType": { "type": "string", "enum": ["WiFi", "Mobile Data", "None"] },
+        "wifiName": { "type": "string" }
+      },
+      "required": ["deviceId", "childId"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Captured message from SMS or social media",
+      "type": "object",
+      "properties": {
+        "childId": { "type": "string" },
+        "platform": { "type": "string", "enum": ["SMS", "WhatsApp", "Messenger", "Telegram"] },
+        "sender": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["incoming", "outgoing"] }
+      },
+      "required": ["childId", "platform", "sender", "content", "timestamp"]
+    },
+    "Location": {
+      "title": "Location",
+      "description": "GPS coordinates of the child's device",
+      "type": "object",
+      "properties": {
+        "childId": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "accuracy": { "type": "number" }
+      },
+      "required": ["childId", "latitude", "longitude", "timestamp"]
+    },
+    "AppUsage": {
+      "title": "AppUsage",
+      "description": "App usage statistics",
+      "type": "object",
+      "properties": {
+        "childId": { "type": "string" },
+        "packageName": { "type": "string" },
+        "appName": { "type": "string" },
+        "totalTimeVisible": { "type": "number" },
+        "lastUsed": { "type": "string", "format": "date-time" }
+      },
+      "required": ["childId", "packageName", "appName"]
+    },
+    "BlockedApp": {
+      "title": "BlockedApp",
+      "description": "Apps blocked by the parent",
+      "type": "object",
+      "properties": {
+        "childId": { "type": "string" },
+        "packageName": { "type": "string" },
+        "blockedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["childId", "packageName"]
+    },
+    "Geofence": {
+      "title": "Geofence",
+      "description": "Safe zones defined by the parent",
+      "type": "object",
+      "properties": {
+        "parentId": { "type": "string" },
+        "childId": { "type": "string" },
+        "name": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "radius": { "type": "number", "description": "Radius in meters" }
+      },
+      "required": ["parentId", "childId", "name", "latitude", "longitude", "radius"]
+    },
+    "Keystroke": {
+      "title": "Keystroke",
+      "description": "Captured keystrokes",
+      "type": "object",
+      "properties": {
+        "childId": { "type": "string" },
+        "appName": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["childId", "text", "timestamp"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Captured app notifications",
+      "type": "object",
+      "properties": {
+        "childId": { "type": "string" },
+        "appName": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["childId", "appName", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/devices/{deviceId}": {
+      "schema": "Device",
+      "description": "Device status and metadata"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Captured messages"
+    },
+    "/locations/{locationId}": {
+      "schema": "Location",
+      "description": "Location history"
+    },
+    "/app_usage/{usageId}": {
+      "schema": "AppUsage",
+      "description": "App usage data"
+    },
+    "/blocked_apps/{blockId}": {
+      "schema": "BlockedApp",
+      "description": "List of blocked apps"
+    },
+    "/geofences/{geofenceId}": {
+      "schema": "Geofence",
+      "description": "Defined geofences"
+    },
+    "/keystrokes/{keystrokeId}": {
+      "schema": "Keystroke",
+      "description": "Captured keystrokes"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Captured app notifications"
+    }
+  }
+}

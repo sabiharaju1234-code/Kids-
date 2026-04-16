@@ -1,0 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-bg-deep: #05070a;
+  --color-bg-surface: rgba(255, 255, 255, 0.05);
+  --color-accent-blue: #00f2ff;
+  --color-accent-red: #ff3d3d;
+  --color-text-primary: #e0e6ed;
+  --color-text-dim: #94a3b8;
+  --color-border-dim: rgba(255, 255, 255, 0.1);
+  
+  --shadow-glow-blue: 0 0 15px rgba(0, 242, 255, 0.3);
+  --shadow-glow-green: 0 0 10px #00ff88;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-deep text-text-primary font-sans antialiased overflow-hidden;
+  }
+}
+
+@layer components {
+  .immersive-card {
+    @apply bg-bg-surface backdrop-blur-md border border-border-dim rounded-2xl p-5 relative overflow-hidden;
+  }
+  
+  .status-dot {
+    @apply w-2 h-2 bg-[#00ff88] rounded-full shadow-glow-green;
+  }
+  
+  .nav-item-active {
+    @apply bg-bg-surface text-accent-blue border-l-2 border-accent-blue;
+  }
+}
